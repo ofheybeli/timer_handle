@@ -11,8 +11,8 @@ Struct_Timer_Handle     *sTimerCreateHandleIter;
 Struct_Timer_Message  	pMsg;
 
 volatile uint16_t  	Timer_Tick;
-uint16_t  		Timer_Tick_Old;
-uint16_t  		Timer_Tick_Dt;
+uint16_t	Timer_Tick_Old;
+uint16_t  	Timer_Tick_Dt;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 Struct_Timer_Handle * Timer_FirstHandleAdress(void)
@@ -21,7 +21,7 @@ Struct_Timer_Handle * Timer_FirstHandleAdress(void)
 	if(sTimerMemory.TimerHandleCount > 0)
 	{
 		sTimerCreateHandle = (Struct_Timer_Handle *) (sTimerMemory.pMemoryBaseAdress);
-		
+
 		while(1)
 		{
 			if( (sTimerCreateHandle->timerStatusFlag & FlgTimerEnable) != 0) 
@@ -41,14 +41,12 @@ uint8_t Timer_SumHandle()
 	uint8_t rToplam=0;
 	sTimerCreateHandleIter = Timer_FirstHandleAdress();
 	
-	while(1)
+	while( sTimerCreateHandleIter->pNextTimerHandle !=NULL )
 	{		
-		if(sTimerCreateHandle->pNextTimerHandle !=NULL)
-		{
-			rToplam++;
-			sTimerCreateHandle = (Struct_Timer_Handle *) sTimerCreateHandle->pNextTimerHandle;
-		}else return rToplam;
+		rToplam++;
+		sTimerCreateHandleIter = (Struct_Timer_Handle *) sTimerCreateHandleIter->pNextTimerHandle;
 	}
+	return rToplam;
 }
 
 Struct_Timer_Handle * Timer_FindHandle(Time_Handle_Id TimerHandle)
@@ -58,39 +56,43 @@ Struct_Timer_Handle * Timer_FindHandle(Time_Handle_Id TimerHandle)
 
 void Timer_ExecTickInt()
 {
-		uint8_t i;
-			
-		if(Timer_Tick_Old >  Timer_Tick)
-			{Timer_Tick_Dt = ((tMax - Timer_Tick_Old) + Timer_Tick);}
-		else
-			{Timer_Tick_Dt = (Timer_Tick - Timer_Tick_Old);}
-			
-		Timer_Tick_Old = Timer_Tick;
-			
-		for(i=0; i < sTimerMemory.TimerHandleCount; i++)
-		{
-				sTimerCreateHandle = (Struct_Timer_Handle *)(sTimerMemory.pMemoryBaseAdress + sizeof(Struct_Timer_Handle)*i);
-		
-			if( (sTimerCreateHandle->timerStatusFlag & FlgCountEnable) != 0)	
-			{		
-				sTimerCreateHandle->timerCountDt += Timer_Tick_Dt;
-							
-				if(sTimerCreateHandle->timerCountDt  >= sTimerCreateHandle->timerCountMs)
-				{
-						sTimerCreateHandle->timerStatusFlag &= ~FlgCountEnable;
-						sTimerCreateHandle->timerCountDt = 0;
-						pMsg.MsgTimerId = TM_INTERVAL;
-						pMsg.MsgTimerHandle = sTimerCreateHandle->timerHandle;
-						pMsg.MsgTimerSrcHandle = 0;
-						sTimerCreateHandle->func(&pMsg);
-				}			
-			}
-		}		
+	uint8_t i;
+
+	if(Timer_Tick_Old >  Timer_Tick)
+	{
+		Timer_Tick_Dt = ((tMax - Timer_Tick_Old) + Timer_Tick);
+	}
+	else
+	{
+		Timer_Tick_Dt = (Timer_Tick - Timer_Tick_Old);
+	}
+
+	Timer_Tick_Old = Timer_Tick;
+
+	for(i=0; i < sTimerMemory.TimerHandleCount; i++)
+	{
+		sTimerCreateHandle = (Struct_Timer_Handle *)(sTimerMemory.pMemoryBaseAdress + sizeof(Struct_Timer_Handle)*i);
+
+		if( (sTimerCreateHandle->timerStatusFlag & FlgCountEnable) != 0)	
+		{		
+			sTimerCreateHandle->timerCountDt += Timer_Tick_Dt;
+
+			if(sTimerCreateHandle->timerCountDt  >= sTimerCreateHandle->timerCountMs)
+			{
+				sTimerCreateHandle->timerStatusFlag &= ~FlgCountEnable;
+				sTimerCreateHandle->timerCountDt = 0;
+				pMsg.MsgTimerId = TM_INTERVAL;
+				pMsg.MsgTimerHandle = sTimerCreateHandle->timerHandle;
+				pMsg.MsgTimerSrcHandle = 0;
+				sTimerCreateHandle->func(&pMsg);
+			}			
+		}
+	}		
 }
 
 void Timer_Exec()
 {
-  static unsigned char MsgShiftReg = TM_USER;
+	static unsigned char MsgShiftReg = TM_USER;
   
 	if(sTimerCreateHandleIter->pNextTimerHandle != NULL)
 	{
@@ -142,7 +144,7 @@ void Timer_Exec()
 					pMsg.MsgTimerSrcHandle = 0;
 					sTimerCreateHandleIter->func(&pMsg);
 				}
-				//else if( sTimerCreateHandleIter->MsgId >= (1 << TM_USER) ) // 1 adet kullanýcý mesajý için yazýlmýþtýr
+				//else if( sTimerCreateHandleIter->MsgId >= (1 << TM_USER) ) // 1 adet kullanÃ½cÃ½ mesajÃ½ iÃ§in yazÃ½lmÃ½Ã¾tÃ½r
 				//{	
                                                 //            //sTimerCreateHandleIter->MsgId
 				//	pMsg.MsgTimerHandle = sTimerCreateHandleIter->timerHandle;
@@ -170,20 +172,23 @@ void Timer_Exec()
 						  sTimerCreateHandleIter->Data.v = 0;
 						  sTimerCreateHandleIter->Data.p = NULL;
 					}
-					if(++ MsgShiftReg > 15 ) MsgShiftReg = TM_USER;
+					if(++ MsgShiftReg > 15 ) 
+					{
+						MsgShiftReg = TM_USER;
+					}
 				}
 			}
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			
 		}
-				sTimerCreateHandleIter = (Struct_Timer_Handle *) sTimerCreateHandleIter->pNextTimerHandle;	
+		sTimerCreateHandleIter = (Struct_Timer_Handle *) sTimerCreateHandleIter->pNextTimerHandle;	
 	}
 	else 
 	{ 
-			sTimerCreateHandleIter = (Struct_Timer_Handle *)sTimerMemory.pMemoryBaseAdress; 
+		sTimerCreateHandleIter = (Struct_Timer_Handle *)sTimerMemory.pMemoryBaseAdress; 
 	}
-            Timer_ExecTickInt();
+	Timer_ExecTickInt();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
